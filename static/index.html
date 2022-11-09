@@ -40,6 +40,7 @@ function sendJSONXMLHTTPRequest(url, objects, callback) {
                 if (xhr.status==200) {
                     //XXX: parse some JSON from the request!
                     //XXX: Pass the data to the callback!
+                    callback(JSON.parse(xhr.responseText));
                 }
             } 
             catch(e) {
@@ -50,6 +51,22 @@ function sendJSONXMLHTTPRequest(url, objects, callback) {
     //XXX: POST to a URL
     //XXX: set the mimetype and the accept headers!
     // Remember to use application/json !
+
+    // https://www.w3schools.com/xml/ajax_xmlhttprequest_send.asp
+
+    if (url === "/world"){
+        xhr.open("GET", url, true);
+        xhr.setRequestHeader("Content-type", "application/json");
+        xhr.setRequestHeader("Accept", "application/json");
+        xhr.send(JSON.stringify(objects));
+
+    } else {
+        xhr.open("POST", url, true);
+        xhr.setRequestHeader("Content-type", "application/json");
+        xhr.setRequestHeader("Accept", "application/json");
+        xhr.send(JSON.stringify(objects));
+    };
+
 }
 
 
@@ -63,10 +80,11 @@ function drawCircle(context,entity) {
         var x = entity["x"];
         var y = entity["y"];
         //moveTo(x,y);
-        fillStyle = entity["colour"];
-        strokeStyle = fillStyle;
+        fillStyle = entity["fillColour"];
+        strokeStyle = entity["strokeColour"];
         arc(x, y, (entity["radius"])?entity["radius"]:50, 0, 2.0 * Math.PI, false);  
-        stroke();                                
+        fill();
+        stroke();
     }
 }
 
@@ -138,6 +156,7 @@ function addEntity(entity, data) {
     world[entity] = data;
     drawNextFrame(); // (but should we?)
     //XXX: Send a XHTML Request that updates the entity you just  modified!
+    sendJSONXMLHTTPRequest('/entity/'+entity, data, function(){});
 
 }
 
@@ -247,22 +266,29 @@ mouse = (function() {
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    addEntityWithoutName({'x':x,'y':y,'fillColour':'#ffff66','strokeColour':'white'});
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    addEntityWithoutName({'x':x,'y':y,'fillColour':'#ff0066','strokeColour':'white'});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
-                          'radius':10});
+    // https://css-tricks.com/snippets/javascript/random-hex-color/
+    const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+    addEntityWithoutName({'x':x,'y':y,'fillColour':randomColor, 'strokeColour':randomColor,
+                          'radius':10, });
 });
 
 
 function update() {
     //XXX: TODO Get the world from the webservice using a XMLHTTPRequest
     drawFrame();
+    sendJSONXMLHTTPRequest("/world", null, function(data){
+        world = data;
+    });
+    drawNextFrame();
+
 }
 
 // 30 frames per second
